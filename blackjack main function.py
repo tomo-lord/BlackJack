@@ -124,19 +124,45 @@ cards_value = {
 cards_value = {}
 import random
 
-def game_of_blackjack(players_engine="rand"):
-    #define the outcome of 1 BJ game (1 player vs casino)
+#here I am just assuming the hand played is the first from active hands
+
+#TODO: create enum for engine type ["rand", ...]
+def game_of_blackjack0(players_engine : str = "rand") -> int:  
+    """plays single game of blackjack
+
+    Parameters
+    ----------
+    players_engine: str
+        type of engine to be used
+
+    Returns
+    -------
+    int
+        calculated value of a game
+    """
     global deck
-    def get_value(hand):
+    #drawing cards
+    players_cards = [deck[0]]
+    deck.pop(0)
+    players_cards += [deck[0]]
+    deck.pop(0)
+    dealers_cards = [deck[0]]
+    deck.pop(0)
+    active_hands = [players_cards] #list of active players' hands
+    played_hands = [] #list of inactive players' hands
+    lost_hands = [] #list of hands that lost
+    won_hands = [] #list of hands that won
+    pushed_hands = []
+    def get_value(played_hand=active_hands[0]):
         #hand should be a list argument
         
         #calculate value and adjust for aces
         value = 0
-        for card in hand:
+        for card in list(played_hand):
             value += cards_value[card]
             
         aces = 0
-        for card in hand: 
+        for card in list(played_hand): 
             if card[-1] == "A":
                 aces += 1
 
@@ -146,7 +172,7 @@ def game_of_blackjack(players_engine="rand"):
         return value
 
                
-    def check_for_bust(played_hand):
+    def check_for_bust(played_hand : list[str] = active_hands[0]) -> bool:
         value_hand = get_value(played_hand)
         if value_hand > 21:
             print("Casino wins")
@@ -158,31 +184,35 @@ def game_of_blackjack(players_engine="rand"):
             return True
 
 
-    def split(played_hand):
+    def split(played_hand : list[str] = active_hands[0]) -> None:
         if len(played_hand) != 2 or played_hand[0] != played_hand[1]:
-            return False
+            return
         hand2 = [played_hand[1]]
         played_hand.pop(1)
-        played_hand += [deck[0]]
+        played_hand.append(deck[0])
         deck.pop(0)
         active_hands.append(hand2)
+        return
+
 
     
-    def double(played_hand):
+    def double(played_hand : list[str] = active_hands[0]) -> None:
         if len(played_hand) != 2:
-            return False
-        played_hand += [deck[0]]
-        deck.pop(0)
-        check_for_bust(played_hand)
-        stand(played_hand)
-
-    
-    def hit(played_hand):
+            return
         played_hand.append(deck[0])
         deck.pop(0)
         check_for_bust(played_hand)
+        stand(played_hand)
+        return
 
-    def stand(played_hand):
+    
+    def hit(played_hand : list[str] = active_hands[0]) -> None:
+        played_hand.append(deck[0])
+        deck.pop(0)
+        check_for_bust(played_hand)
+        return
+
+    def stand(played_hand : list[str] = active_hands[0]) -> None:
         played_hands.append(played_hand)
         active_hands.remove(played_hand)
         return
@@ -223,50 +253,60 @@ def game_of_blackjack(players_engine="rand"):
                 print("Player wins")
                 won_hands.append(hand)
                 played_hands.remove(hand)
+        return
 
 
 
     print("Game starts...")
-    #drawing cards
-    players_cards = [deck[0]]
-    deck.pop(0)
-    players_cards += [deck[0]]
-    deck.pop(0)
-    dealers_cards = [deck[0]]
-    deck.pop(0)
-    active_hands = [players_cards] #list of active players' hands
-    played_hands = [] #list of inactive players' hands
-    lost_hands = [] #list of hands that lost
-    won_hands = [] #list of hands that won
-    pushed_hands = []
+
     #checking for BlackJack
     if get_value(players_cards) == 21:
         print("Player wins")
         won_hands.append(players_cards)
         active_hands.remove(players_cards)
         #results = df.append(new_row, ignore_index=True)
-        
+    print(players_cards)
+    print(dealers_cards)
         
         
         
     #players decision engine
     #in future there should be rand (random choices), basic (BJ basic strategy - proven best possible move)
-    if players_engine == "rand":
-        moves = [stand, hit, double, split]
-        while len(active_hands) > 0:
-            played_hand = active_hands[0]
-            if len(played_hand) == 1:
-                hit(played_hand)
-            move = random.choice(moves)
-            if move == "stand":
-                stand(played_hand)
-            if move == "hit":
-                hit(played_hand)
-            if move == "double":
-                double(played_hand)
-            if move == "split":
-                split(played_hand)
-        casino_move()
+ 
+    #for now implemented a random engine
+    moves = ['stand', 'hit', 'double', 'split']
+    def print_status():
+        print("Active hands:  ")
+        print(active_hands)
+        
+    while True:
+        move = random.choice(moves)
+        if move == "stand":
+            print("player standing")
+            print_status()
+            stand()
+        if len(active_hands)==0:
+            break            
+        if move == "hit":
+            print("player hitting")
+            print_status()
+            hit()
+        if len(active_hands)==0:
+            break
+        if move == "double":
+            print("player doubling")
+            print_status()
+            double()
+        if len(active_hands)==0:
+            break
+        if move == "split":
+            print("split")
+            print_status()
+            split()
+        if len(active_hands)==0:
+            break
+    casino_move()
+    print(dealers_cards)
 
     # if players_engine == "manual":
     #     print(f"Dealers cards: {dealers_cards}")
@@ -276,3 +316,8 @@ def game_of_blackjack(players_engine="rand"):
     #         stand()
 
     #if players_engine == "basic":
+
+
+
+    shuffle(6)
+    game_of_blackjack0()
