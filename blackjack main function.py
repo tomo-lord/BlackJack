@@ -178,14 +178,14 @@ def game_of_blackjack0(players_engine : str = "rand") -> int:
             print("Casino wins")
             lost_hands.append(played_hand)
             active_hands.remove(played_hand)
-            return False
+            return True
         else:
             #results = df.append(new_row, ignore_index=True)
-            return True
+            return False
 
 
     def split(played_hand : list[str] = active_hands[0]) -> None:
-        if len(played_hand) != 2 or played_hand[0] != played_hand[1]:
+        if len(played_hand) != 2 or cards_value[played_hand[0]] != cards_value[played_hand[1]]:
             return False
         hand2 = [played_hand[1]]
         played_hand.pop(1)
@@ -201,8 +201,8 @@ def game_of_blackjack0(players_engine : str = "rand") -> int:
             return False
         played_hand.append(deck[0])
         deck.pop(0)
-        check_for_bust(played_hand)
-        stand(played_hand)
+        if check_for_bust(played_hand) == False:
+            stand(played_hand)
         return
 
     
@@ -271,7 +271,7 @@ def game_of_blackjack0(players_engine : str = "rand") -> int:
         
         
     #players decision engine
-    #in future there should be rand (random choices), basic (BJ basic strategy - proven best possible move)
+    #rand, basic, manual
  
     if players_engine == "rand":
     #for now implemented a random engine
@@ -279,16 +279,21 @@ def game_of_blackjack0(players_engine : str = "rand") -> int:
 
         def print_status():
             print("--------------------")
-            print("Active hands:  ")
-            print(active_hands)
-            print("Played hands:  ")
-            print(played_hands)
-            print("Lost hands:  ")
-            print(lost_hands)
-            print("Won hands:  ")
-            print(won_hands)
-            print("Pushed hands:  ")
-            print(pushed_hands)
+            if len(active_hands) != 0:
+                print("Active hands:  ")
+                print(active_hands)
+            if len(played_hands) != 0:            
+                print("Played hands:  ")
+                print(played_hands)
+            if len(lost_hands) != 0:
+                print("Lost hands:  ")
+                print(lost_hands)
+            if len(won_hands) != 0:
+                print("Won hands:  ")
+                print(won_hands)
+            if len(pushed_hands) != 0:
+                print("Pushed hands:  ")
+                print(pushed_hands)
             print("--------------------")
 
 
@@ -310,16 +315,13 @@ def game_of_blackjack0(players_engine : str = "rand") -> int:
             if move == "double":
                 print("player doubling")
                 if double() != False:
-                    double()
                     print_status()
-                else: print('move rejected')
-                
+                else: print('move rejected')  
             if len(active_hands)==0:
                 break
             if move == "split":
                 print("split")
                 if split() != False:
-                    split()
                     print_status()
                 else: print("move rejected")
             if len(active_hands)==0:
