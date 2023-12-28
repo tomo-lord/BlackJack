@@ -121,8 +121,6 @@ cards_value = {
     'Heart A' : 11}
 
 
-cards_value = {}
-import random
 
 #here I am just assuming the hand played is the first from active hands
 
