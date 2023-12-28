@@ -151,6 +151,8 @@ def game_of_blackjack0(players_engine : str = "rand") -> int:
     lost_hands = [] #list of hands that lost
     won_hands = [] #list of hands that won
     pushed_hands = []
+
+
     def get_value(played_hand=active_hands[0]):
         #hand should be a list argument
         
@@ -184,7 +186,7 @@ def game_of_blackjack0(players_engine : str = "rand") -> int:
 
     def split(played_hand : list[str] = active_hands[0]) -> None:
         if len(played_hand) != 2 or played_hand[0] != played_hand[1]:
-            return
+            return False
         hand2 = [played_hand[1]]
         played_hand.pop(1)
         played_hand.append(deck[0])
@@ -196,7 +198,7 @@ def game_of_blackjack0(players_engine : str = "rand") -> int:
     
     def double(played_hand : list[str] = active_hands[0]) -> None:
         if len(played_hand) != 2:
-            return
+            return False
         played_hand.append(deck[0])
         deck.pop(0)
         check_for_bust(played_hand)
@@ -271,42 +273,61 @@ def game_of_blackjack0(players_engine : str = "rand") -> int:
     #players decision engine
     #in future there should be rand (random choices), basic (BJ basic strategy - proven best possible move)
  
+    if players_engine == "rand":
     #for now implemented a random engine
-    moves = ['stand', 'hit', 'double', 'split']
-    def print_status():
-        print("Active hands:  ")
-        print(active_hands)
-        
-    while True:
-        move = random.choice(moves)
-        if move == "stand":
-            print("player standing")
-            print_status()
-            stand()
-        if len(active_hands)==0:
-            break            
-        if move == "hit":
-            print("player hitting")
-            print_status()
-            hit()
-        if len(active_hands)==0:
-            break
-        if move == "double":
-            print("player doubling")
-            print_status()
-            double()
-        if len(active_hands)==0:
-            break
-        if move == "split":
-            print("split")
-            print_status()
-            split()
-        if len(active_hands)==0:
-            break
-    casino_move()
-    print(dealers_cards)
+        moves = ['stand', 'hit', 'double', 'split']
 
-    # if players_engine == "manual":
+        def print_status():
+            print("--------------------")
+            print("Active hands:  ")
+            print(active_hands)
+            print("Played hands:  ")
+            print(played_hands)
+            print("Lost hands:  ")
+            print(lost_hands)
+            print("Won hands:  ")
+            print(won_hands)
+            print("Pushed hands:  ")
+            print(pushed_hands)
+            print("--------------------")
+
+
+
+        while True:
+            move = random.choice(moves)
+            if move == "stand":
+                print("player standing")
+                stand()
+                print_status()
+            if len(active_hands)==0:
+                break            
+            if move == "hit":
+                print("player hitting")
+                hit()
+                print_status()
+            if len(active_hands)==0:
+                break
+            if move == "double":
+                print("player doubling")
+                if double() != False:
+                    double()
+                    print_status()
+                else: print('move rejected')
+                
+            if len(active_hands)==0:
+                break
+            if move == "split":
+                print("split")
+                if split() != False:
+                    split()
+                    print_status()
+                else: print("move rejected")
+            if len(active_hands)==0:
+                break
+        casino_move()
+        print(dealers_cards)
+
+    #if players_engine == "manual":
     #     print(f"Dealers cards: {dealers_cards}")
     #     print(f"Your cards: {players_cards}")
     #     response = input("Your move: ")
@@ -316,6 +337,5 @@ def game_of_blackjack0(players_engine : str = "rand") -> int:
     #if players_engine == "basic":
 
 
-
-    shuffle(6)
-    game_of_blackjack0()
+shuffle(6)
+game_of_blackjack0()
