@@ -125,7 +125,7 @@ cards_value = {
 #here I am just assuming the hand played is the first from active hands
 
 #TODO: create enum for engine type ["rand", ...]
-def game_of_blackjack0(players_engine : str = "rand") -> int:  
+def game_of_blackjack(players_engine : str = "rand") -> int:  
     """plays single game of blackjack
 
     Parameters
@@ -188,6 +188,7 @@ def game_of_blackjack0(players_engine : str = "rand") -> int:
         if len(played_hand) != 2 or cards_value[played_hand[0]] != cards_value[played_hand[1]]:
             return False
         hand2 = [played_hand[1]]
+        list(hand2)
         played_hand.pop(1)
         played_hand.append(deck[0])
         deck.pop(0)
@@ -197,20 +198,22 @@ def game_of_blackjack0(players_engine : str = "rand") -> int:
 
     
     def double(played_hand : list[str] = active_hands[0]) -> None:
-        if len(played_hand) != 2:
+        if len(played_hand) != 2 or get_value(played_hand) == 21:
             return False
         played_hand.append(deck[0])
         deck.pop(0)
         if check_for_bust(played_hand) == False:
             stand(played_hand)
-        return
+        return True
 
     
     def hit(played_hand : list[str] = active_hands[0]) -> None:
+        if get_value(played_hand) == 21:
+            return False
         played_hand.append(deck[0])
         deck.pop(0)
         check_for_bust(played_hand)
-        return
+        return True
 
     def stand(played_hand : list[str] = active_hands[0]) -> None:
         played_hands.append(played_hand)
@@ -297,47 +300,54 @@ def game_of_blackjack0(players_engine : str = "rand") -> int:
             print("--------------------")
 
 
-
         while True:
+            
+            if len(active_hands)==0:
+                break
+
+            if len(active_hands[0])==1:
+                print("player hitting")
+                hit(active_hands[0])
+                print_status()
+
             move = random.choice(moves)
+
             if move == "stand":
                 print("player standing")
-                stand()
+                stand(active_hands[0])
                 print_status()
-            if len(active_hands)==0:
-                break            
+          
             if move == "hit":
                 print("player hitting")
-                hit()
-                print_status()
-            if len(active_hands)==0:
-                break
-            if move == "double":
-                print("player doubling")
-                if double() != False:
-                    print_status()
-                else: print('move rejected')  
-            if len(active_hands)==0:
-                break
-            if move == "split":
-                print("split")
-                if split() != False:
+                if hit(active_hands[0]) != False:
                     print_status()
                 else: print("move rejected")
+
+            if move == "double":
+                print("player doubling")
+                if double(active_hands[0]) != False:
+                    print_status()
+                else: print('move rejected')  
+            if move == "split":
+                print("split")
+                if split(active_hands[0]) != False:
+                    print_status()
+                else: print("move rejected")
+
             if len(active_hands)==0:
                 break
+
         casino_move()
         print(dealers_cards)
+        print_status()
 
-    #if players_engine == "manual":
+    # if players_engine == "manual":
     #     print(f"Dealers cards: {dealers_cards}")
     #     print(f"Your cards: {players_cards}")
-    #     response = input("Your move: ")
-    #     if response == "stand":
-    #         stand()
+    #     print('possible actions: hit(), stand(), double(), split(), print_status(), casino_move()')
+        
 
     #if players_engine == "basic":
 
 
-shuffle(6)
-game_of_blackjack0()
+game_of_blackjack()
