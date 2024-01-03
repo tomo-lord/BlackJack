@@ -147,10 +147,12 @@ def game_of_blackjack(players_engine : str = "rand") -> int:
     deck.pop(0)
     dealers_cards = [deck[0]]
     deck.pop(0)
+    starting_hand = [players_cards]
     active_hands = [players_cards] #list of active players' hands
     played_hands = [] #list of inactive players' hands
     lost_hands = [] #list of hands that lost
     won_hands = [] #list of hands that won
+    won_hands_by_BJ = [] #hands won with a BlackJack (21 in first 2 cards)
     pushed_hands = []
 
 
@@ -225,7 +227,6 @@ def game_of_blackjack(players_engine : str = "rand") -> int:
         return
 
     def casino_move():
-        #implement an after split scenario for multiple hands
         dealers_cards.append(deck[0])
         deck.pop(0)
         value_dealer = get_value(dealers_cards)
@@ -234,9 +235,12 @@ def game_of_blackjack(players_engine : str = "rand") -> int:
             #a scenario of dealers instatnt blackjack is dealt here
             if players_engine == 'rand':
                 print("Casino wins")
-            for hand in played_hands:
+            for hand in list(played_hands):
                 lost_hands.append(hand)
                 played_hands.remove(hand)
+            for hand in list(won_hands_by_BJ):
+                pushed_hands.append(hand)
+                won_hands_by_BJ.remove(hand)
                         
         while value_dealer < 17:
             dealers_cards.append(deck[0])
@@ -275,9 +279,8 @@ def game_of_blackjack(players_engine : str = "rand") -> int:
     if get_value(players_cards) == 21:
         if players_engine == 'rand':
             print("Player wins")
-        won_hands.append(players_cards)
+        won_hands_by_BJ.append(players_cards)
         active_hands.remove(players_cards)
-        #results = df.append(new_row, ignore_index=True)
     if players_engine == 'rand':
         print(players_cards)
         print(dealers_cards)
@@ -385,20 +388,25 @@ def game_of_blackjack(players_engine : str = "rand") -> int:
                 elif value in range(13, 17):
                     if cards_value[dealers_cards[0]] < 7:
                         stand(active_hands[0])
+                    else: hit(active_hands[0])
                 elif value == 12:
                     if cards_value[dealers_cards[0]] in [4, 5, 6]:
                         stand(active_hands[0])
+                    else: hit(active_hands[0])
                 elif value == 11:
                     if double(active_hands[0]) == False:
                         hit(active_hands[0])
+                    else: hit(active_hands[0])
                 elif value == 10:
                     if cards_value[dealers_cards[0]] < 10:
                         if double(active_hands[0]) == False:
-                            hit(active_hands[0]) 
+                            hit(active_hands[0])
+                    else: hit(active_hands[0])
                 elif value == 9:
                     if cards_value[dealers_cards[0]] in range(3,7):
                         if double(active_hands[0]) == False:
                             hit(active_hands[0])
+                    else: hit(active_hands[0])
                 else: hit(active_hands[0])
                     
 
@@ -406,30 +414,34 @@ def game_of_blackjack(players_engine : str = "rand") -> int:
             #this correcponds to a 'soft' hand, below the logic for this scenario
                 if value == 20:
                     stand(active_hands[0])
-                if value == 19:
+                elif value == 19:
                     if cards_value[dealers_cards[0]] == 6:
                         if double(active_hands[0]) == False:
                             stand(active_hands[0])
                     else: stand(active_hands[0])
-                if value == 18:
+                elif value == 18:
                     if cards_value[dealers_cards[0]] in range(2,7):
                         if double(active_hands[0]) == False:
                             stand(active_hands[0])
                     elif cards_value[dealers_cards[0]] in [7, 8]:
                         stand(active_hands[0])
-                if value in range(13, 18) and cards_value[dealers_cards[0]] in [5, 6]:
+                    else: hit(active_hands[0])
+                elif value in range(13, 18) and cards_value[dealers_cards[0]] in [5, 6]:
                     if double(active_hands[0]) == False:
                         hit(active_hands[0])
-                if value in range(15,18) and cards_value[dealers_cards[0]] == 4:
+                elif value in range(15,18) and cards_value[dealers_cards[0]] == 4:
                     if double(active_hands[0]) == False:
                         hit(active_hands[0])
-                if value == 17 and cards_value[dealers_cards[0]] == 3:
+                elif value == 17 and cards_value[dealers_cards[0]] == 3:
                     if double(active_hands[0]) == False:
                         hit(active_hands[0])
                 else: hit(active_hands[0])
 
             if len(active_hands) == 0:
-                break              
+                break
+    
+    casino_move()
+    return starting_hand, dealers_cards[0], lost_hands, pushed_hands, won_hands
                 
 
 
