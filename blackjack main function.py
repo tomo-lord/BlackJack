@@ -156,7 +156,7 @@ def game_of_blackjack(players_engine : str = "rand") -> int:
     pushed_hands = []
 
 
-    def get_value(played_hand=active_hands[0]):
+    def get_value(played_hand):
         #hand should be a list argument
         
         #calculate value and adjust for aces
@@ -179,7 +179,7 @@ def game_of_blackjack(players_engine : str = "rand") -> int:
 
                
     def check_for_bust(played_hand : list[str] = active_hands[0]) -> bool: 
-        value_hand = get_value(played_hand)
+        value_hand, aces_hand = get_value(played_hand)
         if value_hand > 21:
             if players_engine == 'rand':
                 print("Casino wins")
@@ -229,7 +229,7 @@ def game_of_blackjack(players_engine : str = "rand") -> int:
     def casino_move():
         dealers_cards.append(deck[0])
         deck.pop(0)
-        value_dealer = get_value(dealers_cards)
+        value_dealer, aces_dealer = get_value(dealers_cards)
     
         if value_dealer == 21:
             #a scenario of dealers instatnt blackjack is dealt here
@@ -245,7 +245,7 @@ def game_of_blackjack(players_engine : str = "rand") -> int:
         while value_dealer < 17:
             dealers_cards.append(deck[0])
             deck.pop(0)
-            value_dealer = get_value(dealers_cards)
+            value_dealer, aces_dealer = get_value(dealers_cards)
             if value_dealer > 21:
                 for hand in list(played_hands):
                     if players_engine == 'rand':
@@ -254,12 +254,13 @@ def game_of_blackjack(players_engine : str = "rand") -> int:
                     played_hands.remove(hand)
                             
         for hand in list(played_hands):
-            if value_dealer == get_value(hand):
+            value_hand, hand_aces = get_value(hand)
+            if value_dealer == value_hand:
                 if players_engine == 'rand':
                     print("Push")
                 pushed_hands.append(hand)
                 played_hands.remove(hand)
-            elif value_dealer > get_value(hand):
+            elif value_dealer > value_hand:
                 if players_engine == 'rand':
                     print("Casino wins")
                 lost_hands.append(hand)
@@ -441,9 +442,9 @@ def game_of_blackjack(players_engine : str = "rand") -> int:
                 break
     
     casino_move()
-    return starting_hand, dealers_cards[0], lost_hands, pushed_hands, won_hands
+    return starting_hand, dealers_cards[0], lost_hands, pushed_hands, won_hands, won_hands_by_BJ
                 
 
 
 shuffle(1)
-game_of_blackjack()
+game_of_blackjack(players_engine='basic')
