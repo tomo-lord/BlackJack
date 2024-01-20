@@ -23,8 +23,7 @@ def shuffle(decks):
 #here I am just assuming the hand played is the first from active hands
 
 #TODO: create enum for engine type ["rand", ...]
-#TODO: add a list to track bets and payouts. It get the first element as input, and should have proper mechanics to double it or add another one if split
-#TODO: do a check for BJ for dealer if the upcard is a 10 or A
+#TODO: do a check for BJ for dealer if the upcard is a 10 or A - fix it so it is not reviewed again on casino_move()
 def game_of_blackjack(bet : int = 1, players_engine : str = "basic") -> int:  
     """plays single game of blackjack
 
@@ -51,12 +50,12 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic") -> int:
 
 
     #DataFrame for trackability of hands and bets
-    df = pd.DataFrame(columns=['Hand', 'Bet', 'Active', 'Outcome'])
+    df = pd.DataFrame(columns=['Hand', 'Bet', 'Status', 'Outcome'])
     #Hand is a list of stings containing hands cards
     #Bet is an integer of the bet size for given hand 
-    #Active is boolean for if it is active
+    #Status is a sting to indicate if hand is active, played or finished
     #Outcome is the financial result
-    df.loc[0,:] = [players_cards, bet, True, None]
+    df.loc[0,:] = [players_cards, bet, 'Active', None]
 
     
     def get_value(played_hand: list['str']):
@@ -88,27 +87,28 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic") -> int:
                 hand_value, hand_aces = get_value(row['Hand'])
                 if hand_value ==21:
                     df.at[index, 'Outcome'] = df.at[index, "Bet"]
-                    df.at[index, 'Active'] = False
+                    df.at[index, 'Status'] = 'Finished'
                 else:
                     df.at[index, 'Outcome'] = 0
+                    df.at[index, 'Status'] = 'Finished'
 
 
                
     def check_for_bust(hand_index: int) -> bool:
-        played_hand = df.loc[hand_index, 'Hand']
+        played_hand = df.at[hand_index, 'Hand']
         value_hand, aces_hand = get_value(played_hand)
         if value_hand > 21:
             if players_engine == 'rand':
                 print("Casino wins")
-            df.loc[hand_index, 'Active'] = False
-            df.loc[hand_index, 'Outcome'] = 0
+            df.at[hand_index, 'Status'] = 'Finished'
+            df.at[hand_index, 'Outcome'] = 0
             return True
         else:
             return False
 
 
     def split(hand_index: int) -> None:
-        played_hand = df.loc[hand_index, 'Hand']
+        played_hand = df.at[hand_index, 'Hand']
         played_hand = list(played_hand)
         if len(played_hand) != 2 or cards_value[played_hand[0]] != cards_value[played_hand[1]]:
             return False
@@ -117,42 +117,42 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic") -> int:
         played_hand.pop(1)
         played_hand.append(deck[0])
         deck.pop(0)
-        df.loc[hand_index, 'Hand'] = played_hand
+        df.at[hand_index, 'Hand'] = played_hand
         hand2.append(deck[0])
         deck.pop(0)
-        df.loc[len(df)] = [hand2, df.loc[hand_index, 'Bet'], True, None]
+        df.loc[len(df)] = [hand2, df.at[hand_index, 'Bet'], 'Active', None]
         return
 
 
     
     def double(hand_index : int) -> None:
-        played_hand = df.loc[hand_index, 'Hand']
+        played_hand = df.at[hand_index, 'Hand']
         played_hand = list(played_hand)
         if len(played_hand) != 2 or get_value(played_hand) == 21:
             return False
         played_hand.append(deck[0])
         deck.pop(0)
-        df.loc[hand_index, 'Hand'] = played_hand
-        df.loc[hand_index, 'Bet'] = 2*int(df.loc[hand_index, 'Bet'])
+        df.at[hand_index, 'Hand'] = played_hand
+        df.at[hand_index, 'Bet'] = 2*int(df.at[hand_index, 'Bet'])
         if check_for_bust(hand_index = hand_index) == False:
             stand(hand_index = hand_index)
         return True
 
     
     def hit(hand_index : int) -> None:
-        played_hand = df.loc[hand_index, 'Hand']
+        played_hand = df.at[hand_index, 'Hand']
         played_hand = list(played_hand)
         if get_value(played_hand) == 21:
             return False
         played_hand.append(deck[0])
         deck.pop(0)
-        df.loc[hand_index, 'Hand'] = played_hand
+        df.at[hand_index, 'Hand'] = played_hand
         check_for_bust(hand_index=hand_index)
         return True
 
 
     def stand(hand_index : int) -> None:
-        df.loc[hand_index, "Active"] = False
+        df.loc[hand_index, "Status"] = 'Played'
         return
 
 
@@ -166,59 +166,66 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic") -> int:
             value_dealer, aces_dealer = get_value(dealers_cards)
             if value_dealer > 21:
                 for index, row in df.iterrows():
-                    df.loc[index, 'Outcome'] = 2*int(df.loc[index, 'Bet'])
-                    break
+                    if df.at[index, 'Status'] == 'Played':
+                        df.at[index, 'Outcome'] = 2*int(df.at[index, 'Bet'])
+                        df.at[index, 'Status'] = 'Finished'
+
                             
         for index, row in df.iterrows():
-            value_hand, hand_aces = get_value(df.loc[index, 'Hand'])
-            if value_dealer == value_hand:
-                df.loc[index, 'Outcome'] = df.loc[index, 'Bet']
-            elif value_dealer > value_hand:
-                df.loc[index, 'Outcome'] = 0
-            else:
-                df.loc[index, 'Outcome'] = 2*int(df.loc[index, 'Bet'])
+            value_hand, hand_aces = get_value(df.at[index, 'Hand'])
+            if df.at[index, 'Status'] == 'Played':
+                if value_dealer == value_hand:
+                    df.at[index, 'Outcome'] = df.at[index, 'Bet']
+                    df.at[index, 'Status'] = 'Finished'
+                elif value_dealer > value_hand:
+                    df.at[index, 'Outcome'] = 0
+                    df.at[index, 'Status'] = 'Finished'
+                else:
+                    df.at[index, 'Outcome'] = 2*int(df.at[index, 'Bet'])
+                    df.at[index, 'Status'] = 'Finished'
 
 
     # if players_engine == 'rand':
     #     print("Game starts...")
 
     #checking for BlackJack
-    if get_value(players_cards) == 21:
-        if players_engine == 'rand':
-            print("Player wins")
-        df.loc[0, 'Outcome'] = 2.5*int(df.loc[0, 'Bet'])
+    v1, a1 = get_value(players_cards)
+    if v1 == 21:
+        df.at[0, 'Outcome'] = 2.5*int(df.at[0, 'Bet'])
+        df.at[0, 'Status'] = 'Finished'
 
 
 
     if players_engine == "basic":
-        while len(df[df['Active'] == True]) > 0:
-            f_active_hand_index = df[df['Active'] == True ].index[0] #defines the index of first active hand
-            f_active_hand = df.loc[f_active_hand_index, 'Hand'] #defines the first active hand
+        while len(df[df['Status'] == 'Active']) > 0:
+            f_active_hand_index = df[df['Status'] == 'Active'].index[0] #defines the index of first active hand
+            f_active_hand = df.at[f_active_hand_index, 'Hand'] #defines the first active hand
+            value, aces = get_value(f_active_hand)
             if len(f_active_hand) == 1:
                 hit(f_active_hand_index)
-                f_active_hand = df.loc[f_active_hand_index, 'Hand']
-            if len(f_active_hand) == 2:
-
-
+                f_active_hand = df.at[f_active_hand_index, 'Hand']
                 #defining spliting logic for basic strategy
-                if cards_value[f_active_hand[0]] == cards_value[f_active_hand[1]]:
-                
-                    if cards_value[f_active_hand[0]] in [8, 11]:
+            f_active_hand_index = df[df['Status'] == 'Active'].index[0] #defines the index of first active hand
+            f_active_hand = df.at[f_active_hand_index, 'Hand'] #defines the first active hand
+            if cards_value[f_active_hand[0]] == cards_value[f_active_hand[1]] and len(f_active_hand) == 2:    
+                if cards_value[f_active_hand[0]] in [8, 11]:
+                    split(f_active_hand_index)
+                elif cards_value[f_active_hand[0]] == 9:
+                    if cards_value[dealers_cards[0]] not in [7, 10, 11]:
                         split(f_active_hand_index)
-                    if cards_value[f_active_hand[0]] == 9:
-                        if cards_value[dealers_cards[0]] not in [7, 10, 11]:
-                            split(f_active_hand_index)
-                    if cards_value[f_active_hand[0]] in [2, 3, 7]:
-                        if cards_value[dealers_cards[0]] < 8:
-                            split(f_active_hand_index) 
-                    if cards_value[f_active_hand[0]] == 6:
-                        if cards_value[dealers_cards[0]] < 7:
-                            split(f_active_hand_index)
-                    if cards_value[f_active_hand[0]] == 4:
-                        if cards_value[dealers_cards[0]] in [5, 6]:
-                            split(f_active_hand_index)
+                elif cards_value[f_active_hand[0]] in [2, 3, 7]:
+                    if cards_value[dealers_cards[0]] < 8:
+                        split(f_active_hand_index) 
+                elif cards_value[f_active_hand[0]] == 6:
+                    if cards_value[dealers_cards[0]] < 7:
+                        split(f_active_hand_index)
+                elif cards_value[f_active_hand[0]] == 4:
+                    if cards_value[dealers_cards[0]] in [5, 6]:
+                        split(f_active_hand_index)
 
-            value, aces = get_value(f_active_hand) 
+            f_active_hand_index = df[df['Status'] == 'Active'].index[0] #defines the index of first active hand
+            f_active_hand = df.at[f_active_hand_index, 'Hand'] #defines the first active hand
+             
             if aces == 0:
             #this corresponds to a 'hard' hand, below the logic for this scenario
                 if value > 16:
@@ -248,9 +255,9 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic") -> int:
                 else: hit(f_active_hand_index)
                     
 
-            if aces > 0:
-            #this correcponds to a 'soft' hand, below the logic for this scenario
-                if value == 20:
+            elif aces > 0:
+            #this correcponds to a 'soft' hand, below the logic for this scenario 
+                if value > 19:
                     stand(f_active_hand_index)
                 elif value == 19:
                     if cards_value[dealers_cards[0]] == 6:
@@ -276,13 +283,14 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic") -> int:
                 else: hit(f_active_hand_index)
     
         casino_move()
-        return df, dealers_cards[0]
+        return df, dealers_cards
                 
+
 
 
 def BJ_simulator(iterations: int, shoe_size: int, bet_size: int, games_per_deck=5):
     
-    data = pd.DataFrame({'Starting cards': [], 'Dealers card': [], '$result': [], 'Starting running count': [], 'Cards Left after the game':[]})
+    data = pd.DataFrame({'Starting cards': [], 'Dealers card': [], 'Hands amount': [], '$result': [], 'Starting running count': [],'Cards left at start': [], 'Cards Left after the game':[]})
     # $result = game winnings - bets(game cost)
     
     for i in range(iterations):
@@ -294,10 +302,23 @@ def BJ_simulator(iterations: int, shoe_size: int, bet_size: int, games_per_deck=
                     true_count += 1
                 elif cards_value[card] in range(2, 7):
                     true_count -= 1
-            df, dealer_cards = game_of_blackjack(bet = bet_size, players_engine = 'basic')
-            cards_left = len(deck)
-            result = df['Bet'].sum()-df['Outcome'].sum()
-            starting_cards = list(df.loc[0,'Hand'])[:2]
-            w = pd.DataFrame({'Starting cards': [starting_cards], 'Dealers card': [dealer_cards], '$result': [result], 'Starting running count': [true_count], 'Cards Left after the game':[cards_left]})
-            data = pd.concat([data, w], ignore_index=True, axis=0)
+            try:
+                cards_at_start = len(deck)
+                df, dealer_cards = game_of_blackjack(bet = bet_size, players_engine = 'basic')
+                cards_left = len(deck)
+                result = df['Outcome'].sum() - df['Bet'].sum()
+                starting_cards = list(df.loc[0,'Hand'])[:2]
+                w = pd.DataFrame({'Starting cards': [starting_cards], 'Dealers card': [dealer_cards[0]],'Hands amount':[len(df)], '$result': [result], 'Starting running count': [true_count], 'Cards left at start': [cards_at_start], 'Cards Left after the game':[cards_left]})
+                data = pd.concat([data, w], ignore_index=True, axis=0)
+            except ValueError as e:
+                pass
     return data
+
+# shuffle(1)
+# deck[0] = 'Club 10'
+# deck[1] = 'Club Q'
+# df, dealers_cards = game_of_blackjack(bet=100)
+# print(df)
+# data=BJ_simulator(iterations=1,shoe_size=1,bet_size=100, games_per_deck=5)
+# print(data['$result'].sum())
+# data
