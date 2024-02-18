@@ -24,7 +24,7 @@ def shuffle(decks):
 
 #TODO: create enum for engine type ["rand", ...]
 #TODO: do a check for BJ for dealer if the upcard is a 10 or A - fix it so it is not reviewed again on casino_move()
-def game_of_blackjack(bet : int = 1, players_engine : str = "basic") -> int:  
+def game_of_blackjack(bet : int = 1, players_engine : str = "basic", array_pairs=None, array_soft=None, array_hard=None) -> int:  
     """plays single game of blackjack
 
     Parameters
@@ -191,8 +191,9 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic") -> int:
     #checking for BlackJack
     v1, a1 = get_value(players_cards)
     if v1 == 21:
-        df.at[0, 'Outcome'] = 2.5*int(df.at[0, 'Bet'])
-        df.at[0, 'Status'] = 'Finished'
+        if value_dealer != 21:
+            df.at[0, 'Outcome'] = 2.5*int(df.at[0, 'Bet'])
+            df.at[0, 'Status'] = 'Finished'
 
 
 
@@ -210,18 +211,23 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic") -> int:
             if cards_value[f_active_hand[0]] == cards_value[f_active_hand[1]] and len(f_active_hand) == 2:    
                 if cards_value[f_active_hand[0]] in [8, 11]:
                     split(f_active_hand_index)
+                    continue
                 elif cards_value[f_active_hand[0]] == 9:
                     if cards_value[dealers_cards[0]] not in [7, 10, 11]:
                         split(f_active_hand_index)
+                        continue
                 elif cards_value[f_active_hand[0]] in [2, 3, 7]:
                     if cards_value[dealers_cards[0]] < 8:
-                        split(f_active_hand_index) 
+                        split(f_active_hand_index)
+                        continue
                 elif cards_value[f_active_hand[0]] == 6:
                     if cards_value[dealers_cards[0]] < 7:
                         split(f_active_hand_index)
+                        continue
                 elif cards_value[f_active_hand[0]] == 4:
                     if cards_value[dealers_cards[0]] in [5, 6]:
                         split(f_active_hand_index)
+                        continue
 
             f_active_hand_index = df[df['Status'] == 'Active'].index[0] #defines the index of first active hand
             f_active_hand = df.at[f_active_hand_index, 'Hand'] #defines the first active hand
@@ -241,7 +247,6 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic") -> int:
                 elif value == 11:
                     if double(f_active_hand_index) == False:
                         hit(f_active_hand_index)
-                    else: hit(f_active_hand_index)
                 elif value == 10:
                     if cards_value[dealers_cards[0]] < 10:
                         if double(f_active_hand_index) == False:
@@ -284,6 +289,38 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic") -> int:
     
         casino_move()
         return df, dealers_cards
+    
+    else:
+        ### TODO: make matrix as an decision engine case
+
+    
+        while len(df[df['Status'] == 'Active']) > 0:
+            f_active_hand_index = df[df['Status'] == 'Active'].index[0] #defines the index of first active hand
+            f_active_hand = df.at[f_active_hand_index, 'Hand'] #defines the first active hand
+            value, aces = get_value(f_active_hand)
+
+            # Defining the basic strategy as a numpy array
+            # The rows represent player's hand: 8 or less, 9, 10, 11, 12, 13-16, 17+
+            # The columns represent dealer's up card: 2, 3, 4, 5, 6, 7, 8, 9, 10, A
+            # H = Hit, S = Stand, D = Double, P = Split, SR = Surrender
+
+            # below is how an array should look like
+            # all arrays shoul be 3 dimensional, with exactly 3 layers
+                # main layer (0) is the array shown below
+                # layer (1) is for all the exceptions, where current true count is below the number in array
+                # layer (2) is for all the exception, where current true count is above value in main layer
+                # layer 1 and 2 will only exist as lists in an element of 2 dimensional array
+
+            # basic_strategy = np.array([
+            #     ['H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H'],  # 8 or less
+            #     ['H', 'D', 'D', 'D', 'D', 'H', 'H', 'H', 'H', 'H'],  # 9
+            #     ['D', 'D', 'D', 'D', '-7', 'D', 'D', 'D', 'H', 'H'],  # 10
+            #     ['D', 'D', 'D', 'D', 'D', 'D', 'D', 'D', 'D', 'H'],  # 11
+            #     ['H', 'H', 'S', 'S', 'S', 'H', '8', 'H', 'H', 'H'],  # 12
+            #     ['S', 'S', '1', 'S', 'S', 'H', 'H', 'H', 'H', 'H'],  # 13-16
+            #     ['S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S']   # 17+
+            # ])
+
                 
 
 
@@ -310,15 +347,26 @@ def BJ_simulator(iterations: int, shoe_size: int, bet_size: int, games_per_deck=
                 starting_cards = list(df.loc[0,'Hand'])[:2]
                 w = pd.DataFrame({'Starting cards': [starting_cards], 'Dealers card': [dealer_cards[0]],'Hands amount':[len(df)], '$result': [result], 'Starting running count': [true_count], 'Cards left at start': [cards_at_start], 'Cards Left after the game':[cards_left]})
                 data = pd.concat([data, w], ignore_index=True, axis=0)
-            except ValueError as e:
+            except IndexError as e:
                 pass
     return data
 
-# shuffle(1)
-# deck[0] = 'Club 10'
-# deck[1] = 'Club Q'
-# df, dealers_cards = game_of_blackjack(bet=100)
-# print(df)
+
+
+# FIX area
+shuffle(1)
+deck[0] = 'Club A'
+deck[1] = 'Diamond Q'
+deck[2] = 'Spade A'
+deck[3] = 'Heart J'
+
+
+df, dealers_cards = game_of_blackjack(bet=100)
+print(df)
+print(dealers_cards)
+
+
+
 # data=BJ_simulator(iterations=1,shoe_size=1,bet_size=100, games_per_deck=5)
 # print(data['$result'].sum())
 # data
