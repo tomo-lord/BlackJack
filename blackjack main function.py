@@ -24,8 +24,9 @@ def shuffle(decks):
 
 #TODO: create enum for engine type ["rand", ...]
 #TODO: do a check for BJ for dealer if the upcard is a 10 or A - fix it so it is not reviewed again on casino_move()
-def game_of_blackjack(bet : int = 1, players_engine : str = "basic", array_pairs=None, array_soft=None, array_hard=None) -> int:  
+def game_of_blackjack(bet : int = 1, players_engine : str = "basic", array_pairs=None, array_soft=None, array_hard=None, true_count : float = 0) -> pd.DataFrame:
     """plays single game of blackjack
+
 
     Parameters
     ----------
@@ -291,35 +292,201 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic", array_pairs
         return df, dealers_cards
     
     else:
-        ### TODO: make matrix as an decision engine case
+            # DEFINING THE BASIC STRATEGY DEVIATIONS
+            # Defining the players engine as a numpy array
+            # The columns represent dealer's up card: 2, 3, 4, 5, 6, 7, 8, 9, 10, A
+            # H = Hit, S = Stand, D = Double, 
+            # for splits Y = Yes, N = No
+        
+            # all arrays are 3 dimensional, with exactly 3 layers
+                # main layer (0) defines the true count value to enable an exception
+                # layer (1) defines the standard play
+                # layer (2) is for the exceptions, where the player should play differently based on the true count
 
-    
+
+        hard_totals = np.array([
+            # 8 or less
+            [[np.nan,'H',np.nan], [np.nan,'H',np.nan], [5, 'H', 'D'], [3, 'H', 'D'], [1, 'H', 'D'], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan],[np.nan,'H',np.nan], [np.nan,'H',np.nan]],
+            # 9
+            [[1, 'H', 'D'], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [3, 'H', 'D'], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan]],
+            # 10
+            [[np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan]],
+            # 11
+            [[np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'H',np.nan]],
+            # 12
+            [[3, 'H', 'S'], [2, 'H', 'S'], [0, 'H', 'S'], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan]],
+            # 13
+            [[-1, 'H', 'S'], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan]],
+            # 14
+            [[np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan]],
+            # 15
+            [[np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [4, 'H', 'S']],
+            # 16
+            [[np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [4, 'H', 'S'], [0, 'H', 'S'], [np.nan,'H',np.nan]],
+            # 17+
+            [[np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan]]
+        ], dtype=object)
+
+        soft_totals = np.array([
+            # A9
+            [[np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan]], 
+            # A8
+            [[np.nan,'S',np.nan], [np.nan,'S',np.nan], [3, 'S', 'D'], [1, 'S', 'D'], [1, 'S', 'D'], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'S',np.nan]], 
+            # A7
+            [[0, 'S', 'D'], [0, 'S', 'D'], [0, 'S', 'D'], [0, 'S', 'D'], [0, 'S', 'D'], [np.nan,'S',np.nan], [np.nan,'S',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan]],
+            # A6
+            [[1, 'H', 'D'], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan]],
+            # A5
+            [[np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan]],
+            # A4
+            [[np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan]],
+            # A3
+            [[np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan]],
+            # A2
+            [[np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'D',np.nan], [np.nan,'D',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan], [np.nan,'H',np.nan]]
+        ], dtype=object)
+
+
+        pair_splitting = np.array([
+            # AA
+            [[np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan]],
+            # TT
+            [[np.nan,'N',np.nan], [np.nan,'N',np.nan], [6, 'N', 'Y'], [5, 'N', 'Y'], [4, 'N', 'Y'], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan]],
+            # 99
+            [[np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'N',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan]], 
+            # 88
+            [[np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan]],
+            # 77
+            [[np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan]],
+            # 66
+            [[np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan]],
+            # 55
+            [[np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan]],
+            # 44
+            [[np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [[np.nan,'Y',np.nan]], [[np.nan,'Y',np.nan]], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan]],
+            # 33
+            [[np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan]],
+            # 22
+            [[np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'Y',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan], [np.nan,'N',np.nan]]
+        ], dtype=object)
+
+        def compare(x, y):
+            return (y < 0 and x < y) or (y > 0 and x > y)
+
         while len(df[df['Status'] == 'Active']) > 0:
             f_active_hand_index = df[df['Status'] == 'Active'].index[0] #defines the index of first active hand
             f_active_hand = df.at[f_active_hand_index, 'Hand'] #defines the first active hand
             value, aces = get_value(f_active_hand)
 
-            # Defining the basic strategy as a numpy array
-            # The rows represent player's hand: 8 or less, 9, 10, 11, 12, 13-16, 17+
-            # The columns represent dealer's up card: 2, 3, 4, 5, 6, 7, 8, 9, 10, A
-            # H = Hit, S = Stand, D = Double, P = Split, SR = Surrender
+            if cards_value[dealers_cards[0]] == 11:
+                col = 9
+            elif cards_value[dealers_cards[0]] == 10:
+                col = 8
+            else:
+                col = cards_value[dealers_cards[0]] - 2
 
-            # below is how an array should look like
-            # all arrays shoul be 3 dimensional, with exactly 3 layers
-                # main layer (0) is the array shown below
-                # layer (1) is for all the exceptions, where current true count is below the number in array
-                # layer (2) is for all the exception, where current true count is above value in main layer
-                # layer 1 and 2 will only exist as lists in an element of 2 dimensional array
+            #checking for splits
+            if cards_value[f_active_hand[0]] == cards_value[f_active_hand[1]] and len(f_active_hand) == 2:
+                if cards_value[f_active_hand[0]] == 11:
+                    row = 0
+                elif cards_value[f_active_hand[0]] == 10:
+                    row = 1
+                else:
+                    row = 11 - cards_value[f_active_hand[0]]
 
-            # basic_strategy = np.array([
-            #     ['H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H'],  # 8 or less
-            #     ['H', 'D', 'D', 'D', 'D', 'H', 'H', 'H', 'H', 'H'],  # 9
-            #     ['D', 'D', 'D', 'D', '-7', 'D', 'D', 'D', 'H', 'H'],  # 10
-            #     ['D', 'D', 'D', 'D', 'D', 'D', 'D', 'D', 'D', 'H'],  # 11
-            #     ['H', 'H', 'S', 'S', 'S', 'H', '8', 'H', 'H', 'H'],  # 12
-            #     ['S', 'S', '1', 'S', 'S', 'H', 'H', 'H', 'H', 'H'],  # 13-16
-            #     ['S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S', 'S']   # 17+
-            # ])
+                
+                if np.isnan(pair_splitting[row, col, 0]):
+                    if pair_splitting[row, col, 1] == 'Y':
+                        split(f_active_hand_index)
+                        continue
+                else:
+                    if true_count > pair_splitting[row, col, 0]:
+                        if pair_splitting[row, col, 2] == 'Y':
+                            split(f_active_hand_index)
+                            continue
+                        else: pass
+                    else:
+                        if pair_splitting[row, col, 1] == 'Y':
+                            split(f_active_hand_index)
+                            continue
+                        else: pass
+            
+            #checking for hard totals
+            if aces == 0:
+                if value > 8 and value < 17:
+                    row = value - 8
+                elif value <= 8:
+                    row = 0
+                else:
+                    row = 9
+
+                if np.isnan(hard_totals[row, col, 0]):
+                    if hard_totals[row, col, 1] == 'H':
+                        hit(f_active_hand_index)
+                        continue
+                    elif hard_totals[row, col, 1] == 'S':
+                        stand(f_active_hand_index)
+                        continue
+                    else:
+                        double(f_active_hand_index)
+                        continue
+                else:
+                    if compare(true_count, hard_totals[row, col, 0]):
+                        if hard_totals[row, col, 2] == 'H':
+                            hit(f_active_hand_index)
+                            continue
+                        elif hard_totals[row, col, 2] == 'S':
+                            stand(f_active_hand_index)
+                            continue
+                        else:
+                            double(f_active_hand_index)
+                            continue
+                    else:
+                        if hard_totals[row, col, 1] == 'H':
+                            hit(f_active_hand_index)
+                            continue
+                        elif hard_totals[row, col, 1] == 'S':
+                            stand(f_active_hand_index)
+                            continue
+                        else:
+                            double(f_active_hand_index)
+                            continue
+                        
+            #checking for soft totals
+            else:
+                row = 20 - value
+                if np.isnan(soft_totals[row, col, 0]):
+                    if soft_totals[row, col, 1] == 'H':
+                        hit(f_active_hand_index)
+                        continue
+                    elif soft_totals[row, col, 1] == 'S':
+                        stand(f_active_hand_index)
+                        continue
+                    else:
+                        double(f_active_hand_index)
+                        continue
+                else:
+                    if compare(true_count, soft_totals[row, col, 0]):
+                        if soft_totals[row, col, 2] == 'H':
+                            hit(f_active_hand_index)
+                            continue
+                        elif soft_totals[row, col, 2] == 'S':
+                            stand(f_active_hand_index)
+                            continue
+                        else:
+                            double(f_active_hand_index)
+                            continue
+                    else:
+                        if soft_totals[row, col, 1] == 'H':
+                            hit(f_active_hand_index)
+                            continue
+                        elif soft_totals[row, col, 1] == 'S':
+                            stand(f_active_hand_index)
+                            continue
+                        else:
+                            double(f_active_hand_index)
+                            continue
+
 
                 
 
