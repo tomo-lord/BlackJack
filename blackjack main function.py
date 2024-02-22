@@ -35,8 +35,8 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic", array_pairs
 
     Returns
     -------
-    int
-        calculated value of a game
+    pd.DataFrame
+        DataFrame with the results of the game
     """
     global deck
     #drawing cards
@@ -76,8 +76,6 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic", array_pairs
             aces -= 1
             value -= 10
         
-        if players_engine == 'rand':
-            return value
         else: return value, aces
 
     #checking for dealers BlackJack
@@ -186,11 +184,9 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic", array_pairs
                     df.at[index, 'Status'] = 'Finished'
 
 
-    # if players_engine == 'rand':
-    #     print("Game starts...")
-
     #checking for BlackJack
     v1, a1 = get_value(players_cards)
+    value_dealer, aces_dealer = get_value(dealers_cards)
     if v1 == 21:
         if value_dealer != 21:
             df.at[0, 'Outcome'] = 2.5*int(df.at[0, 'Bet'])
@@ -205,10 +201,8 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic", array_pairs
             value, aces = get_value(f_active_hand)
             if len(f_active_hand) == 1:
                 hit(f_active_hand_index)
-                f_active_hand = df.at[f_active_hand_index, 'Hand']
+                continue
                 #defining spliting logic for basic strategy
-            f_active_hand_index = df[df['Status'] == 'Active'].index[0] #defines the index of first active hand
-            f_active_hand = df.at[f_active_hand_index, 'Hand'] #defines the first active hand
             if cards_value[f_active_hand[0]] == cards_value[f_active_hand[1]] and len(f_active_hand) == 2:    
                 if cards_value[f_active_hand[0]] in [8, 11]:
                     split(f_active_hand_index)
@@ -377,6 +371,9 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic", array_pairs
             f_active_hand_index = df[df['Status'] == 'Active'].index[0] #defines the index of first active hand
             f_active_hand = df.at[f_active_hand_index, 'Hand'] #defines the first active hand
             value, aces = get_value(f_active_hand)
+            if len(f_active_hand) == 1:
+                hit(f_active_hand_index)
+                continue
 
             if cards_value[dealers_cards[0]] == 11:
                 col = 9
@@ -486,33 +483,35 @@ def game_of_blackjack(bet : int = 1, players_engine : str = "basic", array_pairs
                         else:
                             double(f_active_hand_index)
                             continue
+        casino_move()
+        return df, dealers_cards
 
 
                 
 
 
 
-def BJ_simulator(iterations: int, shoe_size: int, bet_size: int, games_per_deck=5):
+def BJ_simulator(iterations: int, shoe_size: int, bet_size: int, games_per_deck=8):
     
-    data = pd.DataFrame({'Starting cards': [], 'Dealers card': [], 'Hands amount': [], '$result': [], 'Starting running count': [],'Cards left at start': [], 'Cards Left after the game':[]})
-    # $result = game winnings - bets(game cost)
+    data = pd.DataFrame({'Starting cards': [], 'Dealers card': [], 'Hands amount': [], '$result': [], 'Running count': [],'True count':[], 'Cards left at start': [], 'Cards Left after the game':[]})
     
     for i in range(iterations):
         deck = shuffle(decks=shoe_size)
         for n in range(games_per_deck*shoe_size):
-            true_count = 0
+            running_count = 0
             for card in list(deck):
                 if cards_value[card] in [10, 11]:
-                    true_count += 1
+                    running_count += 1
                 elif cards_value[card] in range(2, 7):
-                    true_count -= 1
+                    running_count -= 1
             try:
                 cards_at_start = len(deck)
-                df, dealer_cards = game_of_blackjack(bet = bet_size, players_engine = 'basic')
+                true_count = running_count/(cards_at_start/52)
+                df, dealer_cards = game_of_blackjack(bet = bet_size, players_engine = 'deviation', true_count=true_count)
                 cards_left = len(deck)
                 result = df['Outcome'].sum() - df['Bet'].sum()
                 starting_cards = list(df.loc[0,'Hand'])[:2]
-                w = pd.DataFrame({'Starting cards': [starting_cards], 'Dealers card': [dealer_cards[0]],'Hands amount':[len(df)], '$result': [result], 'Starting running count': [true_count], 'Cards left at start': [cards_at_start], 'Cards Left after the game':[cards_left]})
+                w = pd.DataFrame({'Starting cards': [starting_cards], 'Dealers card': [dealer_cards[0]],'Hands amount':[len(df)], '$result': [result], 'Running count': [running_count],'True count':[true_count], 'Cards left at start': [cards_at_start], 'Cards Left after the game':[cards_left]})
                 data = pd.concat([data, w], ignore_index=True, axis=0)
             except IndexError as e:
                 pass
@@ -521,19 +520,20 @@ def BJ_simulator(iterations: int, shoe_size: int, bet_size: int, games_per_deck=
 
 
 # FIX area
-shuffle(1)
-deck[0] = 'Club A'
-deck[1] = 'Diamond Q'
-deck[2] = 'Spade A'
-deck[3] = 'Heart J'
+# shuffle(1)
+# deck[0] = 'Club A'
+# deck[1] = 'Diamond Q'
+# deck[2] = 'Spade A'
+# deck[3] = 'Heart J'
 
 
-df, dealers_cards = game_of_blackjack(bet=100)
-print(df)
-print(dealers_cards)
+# df, dealers_cards = game_of_blackjack(bet=100)
+# print(df)
+# print(dealers_cards)
 
 
 
-# data=BJ_simulator(iterations=1,shoe_size=1,bet_size=100, games_per_deck=5)
-# print(data['$result'].sum())
-# data
+data=BJ_simulator(iterations=10,shoe_size=8,bet_size=100)
+print(data['$result'].sum())
+data
+
