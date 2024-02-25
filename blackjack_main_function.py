@@ -13,7 +13,7 @@ def shuffle(decks):
     return deck             
 
 
-def BJ_simulator(iterations: int, bankroll: float = 10000, shoe_size: int = 8, bet_size: int = 100, games_per_deck=8, min_table_bet: int = 100, max_table_bet: int = 10000) -> pd.DataFrame:
+def BJ_simulator(iterations: int, bankroll: float = 10000, shoe_size: int = 8, bet_size: int = 100, games_per_deck=8, min_table_bet: int = 100, max_table_bet: int = 10000, players_engine='basic') -> pd.DataFrame:
     
     data = pd.DataFrame({'Starting cards': [], 'Dealers card': [], 'Hands amount': [], '$result': [], 'Running count': [],'True count':[], 'Cards left at start': [], 'Cards Left after the game':[]})
     
@@ -30,18 +30,23 @@ def BJ_simulator(iterations: int, bankroll: float = 10000, shoe_size: int = 8, b
             cards_at_start = len(deck)
             true_count = running_count/(cards_at_start/52)
             
-            # Kelly criterion implementation (assumes OR = 1, and p = 0.495 + (true_count*0.005))
-            if true_count <= 2:
-                bet = min_table_bet
-            elif true_count > 2:
-                p = 0.495 + (true_count*0.005)
-                bet = bankroll*(2*p-1)
-                if bet < min_table_bet:
-                    bet = min_table_bet
-                elif bet > max_table_bet:
-                    bet = max_table_bet
+            if players_engine != 'basic':
 
-            single_game_of_blackjack = game_of_blackjack(deck=deck, bet = bet, players_engine = 'deviation', true_count=true_count)
+                # Kelly criterion implementation (assumes odds ratio = 1, and p = 0.495 + (true_count*0.005))
+
+                if true_count <= 2:
+                    bet = min_table_bet
+                elif true_count > 2:
+                    p = 0.495 + (true_count*0.005)
+                    bet = bankroll*(2*p-1)
+                    if bet < min_table_bet:
+                        bet = min_table_bet
+                    elif bet > max_table_bet:
+                        bet = max_table_bet
+            else: 
+                bet = bet_size
+
+            single_game_of_blackjack = game_of_blackjack(deck=deck, bet = bet, players_engine = players_engine, true_count=true_count)
 
             df, dealer_cards = single_game_of_blackjack.play_hand()
             cards_left = len(deck)
@@ -54,19 +59,6 @@ def BJ_simulator(iterations: int, bankroll: float = 10000, shoe_size: int = 8, b
 
 
 if __name__ == '__main__':
-    # FIX area
-    # shuffle(1)
-    # deck[0] = 'Club A'
-    # deck[1] = 'Diamond Q'
-    # deck[2] = 'Spade A'
-    # deck[3] = 'Heart J'
-
-
-    # df, dealers_cards = game_of_blackjack(bet=100)
-    # print(df)
-    # print(dealers_cards)
-
     data = BJ_simulator(iterations=1)
     print(data['$result'].sum())
     print(data)
-

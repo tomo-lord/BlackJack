@@ -21,7 +21,7 @@ class game_of_blackjack:
     """
 
 
-    def __init__(self, deck, bet : int = 1, players_engine : str = "basic", true_count : float = 0):
+    def __init__(self, deck, bet : int = 1, players_engine : str = 'basic', true_count : float = 0):
         self.deck = deck
         self.array_pairs=None
         self.array_soft=None
@@ -74,7 +74,7 @@ class game_of_blackjack:
 
 
 
-        if self.players_engine == "basic":
+        if self.players_engine == 'basic':
             while len(self.df[self.df['Status'] == 'Active']) > 0:
                 f_active_hand_index = self.df[self.df['Status'] == 'Active'].index[0] #defines the index of first active hand
                 f_active_hand = self.df.at[f_active_hand_index, 'Hand'] #defines the first active hand
