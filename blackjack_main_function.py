@@ -46,9 +46,12 @@ def BJ_simulator(iterations: int, bankroll: float = 10000, shoe_size: int = 8, b
             else: 
                 bet = bet_size
 
-            single_game_of_blackjack = game_of_blackjack(deck=deck, bet = bet, players_engine = players_engine, true_count=true_count)
+            try:
+                single_game_of_blackjack = game_of_blackjack(deck=deck, bet=bet, players_engine=players_engine, true_count=true_count)
+                df, dealer_cards = single_game_of_blackjack.play_hand()
+            except IndexError:
+                pass
 
-            df, dealer_cards = single_game_of_blackjack.play_hand()
             cards_left = len(deck)
             result = df['Outcome'].sum() - df['Bet'].sum()
             starting_cards = list(df.loc[0,'Hand'])[:2]
