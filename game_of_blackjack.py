@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from master_data import CARDS_VALUE
+import numpy as np
+from master_data import CARDS_VALUE, HARD_TOTALS, SOFT_TOTALS, PAIR_SPLITTING
 
 
 @dataclass
@@ -14,8 +15,7 @@ class game_of_blackjack:
 
     Returns
     -------
-    pd.DataFrame
-        DataFrame with the results of the game
+    dictionary of lists
     """
 
 
@@ -172,6 +172,107 @@ class game_of_blackjack:
             self.casino_move()
             return self.df, self.dealers_cards
 
+        #############################################################################################################################
+        elif self.players_engine == 'exceptions':
+            #scenario for exceptions play
+ 
+             
+            while 'Active' in self.df['Status']:
+                f_active_hand_index = self.df['Status'].index('Active')
+                f_active_hand = self.df['Hand'][f_active_hand_index]
+                value, aces = self.get_value(f_active_hand)
+
+                # If the hand has only 1 card (edge case), just hit
+                if len(f_active_hand) == 1:
+                    self.hit(f_active_hand_index)
+                    continue
+
+                # Identify dealer's upcard to find the column in the arrays
+                dealer_upcard = CARDS_VALUE[self.dealers_cards[0]]
+                if dealer_upcard == 11:
+                    col = 9   # Ace
+                elif dealer_upcard == 10:
+                    col = 8   # 10 or face
+                else:
+                    col = dealer_upcard - 2  # For cards 2..9 => columns 0..7
+
+                # (1) Check if player can split
+                if len(f_active_hand) == 2 and CARDS_VALUE[f_active_hand[0]] == CARDS_VALUE[f_active_hand[1]]:
+                    # Map the pair value to the row
+                    pair_value = CARDS_VALUE[f_active_hand[0]]
+                    mapping_pairs = {11:0, 10:1, 9:2, 8:3, 7:4, 6:5, 5:6, 4:7, 3:8, 2:9}
+                    row = mapping_pairs.get(pair_value, 9)
+
+                    threshold, action_normal, action_exception = PAIR_SPLITTING[row, col]
+                    if not np.isnan(threshold):
+                        # If compare(...) is True, we use 'action_exception'; else 'action_normal'
+                        if self.compare(self.true_count, threshold):
+                            split_decision = action_exception
+                        else:
+                            split_decision = action_normal
+                    else:
+                        # If threshold is np.nan, no exceptions
+                        split_decision = action_normal
+
+                    # If the decision is 'Y', perform split
+                    if split_decision == 'Y':
+                        self.split(f_active_hand_index)
+                        continue
+                    # If 'N', do not split and continue below
+
+                # (2) If not splitting, check hard vs. soft
+                if aces == 0:
+                    # Hard totals
+                    if value <= 8:
+                        row = 0
+                    elif value >= 17:
+                        row = 9
+                    else:
+                        row = value - 8
+
+                    threshold, action_normal, action_exception = HARD_TOTALS[row, col]
+                else:
+                    # Soft totals
+                    # For example, A9 => 20 => row=0, A8 => 19 => row=1, etc.
+                    row = 20 - value
+                    row = max(0, min(row, 7))  # clamp to [0..7]
+                    threshold, action_normal, action_exception = SOFT_TOTALS[row, col]
+
+                # Decide which action to take
+                if not np.isnan(threshold):
+                    # If compare(...) is True => use action_exception, else action_normal
+                    if self.compare(self.true_count, threshold):
+                        final_action = action_exception
+                    else:
+                        final_action = action_normal
+                else:
+                    final_action = action_normal
+
+                # Execute final_action: 'H', 'S', 'D' etc.
+                if final_action == 'S':
+                    self.stand(f_active_hand_index)
+                elif final_action == 'H':
+                    self.hit(f_active_hand_index)
+                elif final_action == 'D':
+                    # Double is usually valid only when the hand has exactly 2 cards
+                    if len(f_active_hand) == 2:
+                        doubled = self.double(f_active_hand_index)
+                        if not doubled:
+                            self.hit(f_active_hand_index)
+                    else:
+                        # If we have more than 2 cards, we treat 'D' as 'H'
+                        self.hit(f_active_hand_index)
+                else:
+                    # Fallback action if something unrecognized appears
+                    self.hit(f_active_hand_index)
+
+            # After the player's turns, dealer moves
+            self.casino_move()
+            return self.df, self.dealers_cards
+
+
+            ########################################################################################################
+
         else:
             while 'Active' in self.df['Status']:
                 f_active_hand_index = self.df['Status'].index('Active')
@@ -189,7 +290,7 @@ class game_of_blackjack:
 
 
     def compare(self, x, y):
-                return (y < 0 and x < y) or (y > 0 and x > y)
+                return (y <= 0 and x < y) or (y > 0 and x > y)
 
     def get_value(self, played_hand: list['str']):
         #hand should be a list argument
