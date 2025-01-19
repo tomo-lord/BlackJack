@@ -27,6 +27,7 @@ def BJ_simulator(iterations: int = 1,
         'basic' is neither adjusting bet sizes nor playing True Count exceptions
         'kelly' is adjusting the bet sizes but not playing True Count exceptions
         'kelly_and_exceptions' is both adjusting the bet sizes and playing True Count exceptions
+        decision_engine may also be a dictionary with ranges for True Count in key and bet size in value
     """
 
 
@@ -51,8 +52,8 @@ def BJ_simulator(iterations: int = 1,
                 elif CARDS_VALUE[card] in range(2, 7):
                     running_count -= 1
 
-                cards_at_start = len(deck)
-                true_count = running_count / (cards_at_start / 52)
+            cards_at_start = len(deck)
+            true_count = running_count / ((cards_at_start + 1) / 52)
             
             if decision_engine == 'kelly':
                 # Kelly criterion implementation
@@ -80,9 +81,18 @@ def BJ_simulator(iterations: int = 1,
                     elif bet > max_table_bet:
                         bet = max_table_bet
 
-            else: 
+
+
+            elif isinstance(decision_engine, dict):
+                players_engine = 'exceptions'
+                for (low,high), bet_value in decision_engine.items(): #bet_value is value from dict
+                    if low <= true_count < high: #checking if current True Count is in range
+                        bet = bet_value
+                
+            else:
                 bet = bet_size
                 players_engine = 'basic'
+
 
             try:
                 single_game_of_blackjack = game_of_blackjack(deck=deck, bet=bet, players_engine=players_engine, true_count=true_count)

@@ -92,12 +92,23 @@ if __name__ == "__main__":
         trips=100,
         starting_bankroll=20000,
         min_table_bet=10,
-        games_per_trip=2000,
-        max_table_bet=500,
+        games_per_trip=1500,
+        max_table_bet=120,
         shoe_size=8,
         games_per_deck=8,
-        processes=os.cpu_count(),
+        processes=(os.cpu_count()-1),
+        decision_engine = {
+           (-1000,1) : 10,
+           (1, 2) : 10,
+           (2, 3) : 20,
+           (3, 4) : 60,
+           (4, 5) : 80,
+           (5, 6) : 90,
+           (6, 7) : 100,
+           (7, 8) : 120,
+           (8, 1000) : 120
+        }
     )
     metadata.to_csv('meta results.csv', index=False)
-    df.to_csv('sim results.csv', index=False)
-    print(metadata)
+    #df.to_csv('sim results.csv', index=False)
+    #print(metadata)

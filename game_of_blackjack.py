@@ -271,8 +271,6 @@ class game_of_blackjack:
             return self.df, self.dealers_cards
 
 
-            ########################################################################################################
-
         else:
             while 'Active' in self.df['Status']:
                 f_active_hand_index = self.df['Status'].index('Active')
