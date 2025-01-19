@@ -129,6 +129,6 @@ def BJ_simulator(iterations: int = 1,
 
 
 if __name__ == '__main__':
-    data = BJ_simulator(iterations=1, games_per_deck = 8, shoe_size = 1, decision_engine = 'kelly_and_exceptions')
+    data = BJ_simulator(iterations=1000, games_per_deck = 8, shoe_size = 1, decision_engine = 'kelly_and_exceptions')
     print(data)
     #print(sum(data['$result']))

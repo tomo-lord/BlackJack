@@ -3,7 +3,8 @@ Repository made to simulate outcomes of BlackJack games given diffrent strategie
 
 Cards contain their suit and value as a string, hands built as lists
 
-All simualtions are based on *blackjack main function.py*, check for *BlackJack simulator.ipynb* for planned functions and developement
+All simualtions are based on *blackjack main function.py*, check for *BlackJack simulator.ipynb* for utilization examples
+Use *multiprocessed simulator.py* for optimized runs
 
 Simulation datasets included if you want to analyze already simulated data
 
